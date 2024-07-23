@@ -9,7 +9,7 @@ namespace Employee_API.Controllers
 {
 
     [Route("api/employeeapi/")] 
-    [ApiController]
+    [ApiController] 
 
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -27,14 +27,41 @@ namespace Employee_API.Controllers
         }
 
 
-        // Getting All the Employees
 
+        // Getting all the Employees
         [HttpGet]
         public ActionResult<IEnumerable<EmployeeDTO>> GetEmployees()
         {
-            Custom_Logger.Log("Getting all the Employees", "");
-            return Ok( appDbContext.Employee_Table.ToList() );
+            try
+            {
+                Custom_Logger.Log("Attempting to get all the employees", "");
+
+                // Fetch the employees from the database
+                var employees = appDbContext.Employee_Table.ToList();
+
+                // Check if any employees were found
+                if (employees == null || !employees.Any())
+                {
+                    Custom_Logger.Log("No employees found", "");
+                    return NotFound(new { Message = "No employees found" });
+                }
+
+                // Logging the success Message
+                Custom_Logger.Log("Successfully retrieved employees", "");
+
+                return Ok(employees);
+            }
+            catch (Exception ex)
+            {
+                // Logging the exception
+                Custom_Logger.Log("An error occurred while getting employees", ex.Message);
+
+                // Return an internal server error response
+                return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An error occurred while retrieving employees", Details = ex.Message });
+            }
+
         }
+
 
 
 
@@ -43,16 +70,40 @@ namespace Employee_API.Controllers
 
 
         // Getting the Selected Employee
-        [HttpGet("{id:int}", Name ="GetEmployee")]
+
+        [HttpGet("{id:int}", Name = "GetEmployee")]
         public ActionResult<IEnumerable<EmployeeDTO>> GetEmployee(int id)
         {
 
-            var employee = appDbContext.Employee_Table.FirstOrDefault(u => u.Id == id);
-            if (employee == null)
+            try
             {
-                return NotFound();
+                // Log the attempt to find an employee
+                Custom_Logger.Log("Attempting to get an employee", $"EmployeeID: {id}");
+
+                // Attempt to fetch the employee from the database
+                var employee = appDbContext.Employee_Table.FirstOrDefault(u => u.Id == id);
+
+                // Check if the employee was not found
+                if (employee == null)
+                {
+                    Custom_Logger.Log("No employee found with the specified ID", $"EmployeeID: {id}");
+
+                    return NotFound(new { Message = $"No employee found with ID {id}." });
+                }
+
+                // Log the successful retrieval
+                Custom_Logger.Log("Employee retrieved successfully", $"EmployeeID: {id}");
+
+                return Ok(employee);
             }
-            return Ok(employee);
+            catch (Exception ex)
+            {
+                // Log the exception
+                Custom_Logger.Log("An error occurred while retrieving an employee", $"EmployeeID: {id}, Error: {ex.Message}");
+
+                // Return an internal server error response
+                return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An error occurred while retrieving the employee", Details = ex.Message });
+            }
         }
 
 
@@ -63,37 +114,56 @@ namespace Employee_API.Controllers
 
 
 
-        // Creating the Employee
+
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
-        public ActionResult<EmployeeDTO> CreateEmployee([FromBody] EmployeeDTO employee_dto) 
+        public ActionResult<EmployeeDTO> CreateEmployee([FromBody] EmployeeDTO employee_dto)
         {
-
-            var empolyee_existence = appDbContext.Employee_Table.FirstOrDefault( u => u.Name.ToLower() == employee_dto.Name.ToLower() );
-
-            if(empolyee_existence != null)
+            try
             {
-                ModelState.AddModelError("Custom Error: ", "Employee Already Exists!");
-                return BadRequest(ModelState);
+                if (employee_dto == null)
+                {
+                    Custom_Logger.Log("Attempt to create a null employee", "");
+                    return BadRequest(new { Message = "Employee data is null." });
+                }
+
+                var employeeName = employee_dto.Name.Trim().ToLower();
+
+                var employeeExistence = appDbContext.Employee_Table.FirstOrDefault(u => u.Name.ToLower() == employeeName);
+
+                if (employeeExistence != null)
+                {
+                    Custom_Logger.Log("Attempt to create a duplicate employee", $"EmployeeName: {employeeName}");
+                    return Conflict(new { Message = "An employee with the same name already exists." });
+                }
+
+                if (employee_dto.Id > 0)
+                {
+                    Custom_Logger.Log("Invalid ID provided for new employee", $"EmployeeID: {employee_dto.Id}");
+                    return BadRequest(new { Message = "Invalid ID. ID should not be set for new employees." });
+                }
+
+                Employee model = new()
+                {
+                    Name = employee_dto.Name
+                };
+
+                appDbContext.Employee_Table.Add(model);
+                appDbContext.SaveChanges();
+
+                Custom_Logger.Log("Employee created successfully", $"EmployeeName: {model.Name}");
+
+
+                return CreatedAtRoute("GetEmployee", new { id = model.Id }, model);
             }
-
-            if(employee_dto == null) { ModelState.AddModelError("Custom Error: ", "Employee is Null!");  return BadRequest(ModelState); }
-
-            if (employee_dto.Id > 0) { ModelState.AddModelError("Custom Error: ", "Given Employee Id is Not Valid!"); return StatusCode(StatusCodes.Status400BadRequest, ModelState); }
-
-            Employee model = new()
+            catch (Exception ex)
             {
-                Id = employee_dto.Id,
-                Name = employee_dto.Name
-            };
+                // Logging the exception
+                Custom_Logger.Log("An error occurred while getting employees", ex.Message);
 
-            appDbContext.Employee_Table.Add(model);
-            appDbContext.SaveChanges();
-
-
-            Custom_Logger.Log("Employee Created", "");
-
-            return CreatedAtRoute("GetEmployee", new {id= employee_dto .Id} ,employee_dto);
+                // Return an internal server error response
+                return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An error occurred while retrieving employees", Details = ex.Message });
+            }
         }
 
 
@@ -105,25 +175,43 @@ namespace Employee_API.Controllers
 
 
 
-        // Deleting the Employee
+        //Deleting the Employee
         [HttpDelete("{id:int}", Name = "DeleteEmployee")]
 
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        public IActionResult DeleteEmployee(int id) 
+        public IActionResult DeleteEmployee(int id)
         {
-            if(id == 0) { return BadRequest(); }
+            try
+            {
+                if (id <= 0)
+                {
+                    Custom_Logger.Log("Attempt to delete an employee with invalid ID", $"EmployeeID: {id}");
+                    return BadRequest(new { Message = "Invalid ID. Please provide a valid employee ID." });
+                }
 
-            var Emp_to_be_Delete = appDbContext.Employee_Table.FirstOrDefault( u => u.Id == id );
+                var employeeToBeDeleted = appDbContext.Employee_Table.FirstOrDefault(u => u.Id == id);
 
-            if (Emp_to_be_Delete == null) return BadRequest();
+                if (employeeToBeDeleted == null)
+                {
+                    Custom_Logger.Log("No employee found for deletion", $"EmployeeID: {id}");
+                    return NotFound(new { Message = $"No employee found with ID {id}." });
+                }
 
-            appDbContext.Employee_Table.Remove( Emp_to_be_Delete );
+                appDbContext.Employee_Table.Remove(employeeToBeDeleted);
+                appDbContext.SaveChanges();
 
-            appDbContext.SaveChanges();
+                Custom_Logger.Log("Employee deleted successfully", $"EmployeeID: {id}");
 
-            Custom_Logger.Log("Employee Deleted", "");
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                // Logging the exception
+                Custom_Logger.Log("An error occurred while getting employees", ex.Message);
 
-            return NoContent();
+                // Return an internal server error response
+                return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An error occurred while retrieving employees", Details = ex.Message });
+            }
         }
 
 
@@ -135,26 +223,51 @@ namespace Employee_API.Controllers
 
 
 
-        // Updating the Employee
+
         [HttpPut("{id:int}", Name = "UpdateEmployee")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         public IActionResult UpdateVilla(int id, [FromBody] EmployeeDTO employee_dto)
         {
-            if (employee_dto == null || id != employee_dto.Id) { return BadRequest(); }
 
-            Employee model = new()
+            try
             {
-                Id = employee_dto.Id,
-                Name = employee_dto.Name
-            };
+                if (employee_dto == null)
+                {
+                    Custom_Logger.Log("Attempt to update an employee with null data", "");
+                    return BadRequest(new { Message = "Employee data cannot be null." });
+                }
 
-            appDbContext.Employee_Table.Update( model );
-            appDbContext.SaveChanges();
+                if (id != employee_dto.Id)
+                {
+                    Custom_Logger.Log("Mismatched ID in the request", $"Route ID: {id}, Employee ID: {employee_dto.Id}");
+                    return BadRequest(new { Message = "Mismatched ID in the request." });
+                }
 
+                var employeeToUpdate = appDbContext.Employee_Table.FirstOrDefault(e => e.Id == id);
+                if (employeeToUpdate == null)
+                {
+                    Custom_Logger.Log("Employee not found for update", $"EmployeeID: {id}");
+                    return NotFound(new { Message = $"No employee found with ID {id}." });
+                }
 
-            Custom_Logger.Log("Employee Updated", "");
+                // Update the properties of the existing employee
+                employeeToUpdate.Name = employee_dto.Name;
 
-            return NoContent();
+                appDbContext.Employee_Table.Update(employeeToUpdate);
+                appDbContext.SaveChanges();
+
+                Custom_Logger.Log("Employee updated successfully", $"EmployeeID: {id}");
+
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                // Logging the exception
+                Custom_Logger.Log("An error occurred while getting employees", ex.Message);
+
+                // Return an internal server error response
+                return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An error occurred while retrieving employees", Details = ex.Message });
+            }
         }
 
     }
