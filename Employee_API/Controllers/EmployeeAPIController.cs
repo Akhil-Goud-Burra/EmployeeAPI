@@ -30,7 +30,7 @@ namespace Employee_API.Controllers
 
         // Getting all the Employees
         [HttpGet]
-        public ActionResult<IEnumerable<EmployeeDTO>> GetEmployees()
+        public ActionResult<IEnumerable<EmployeeGetDTO>> GetEmployees()
         {
             try
             {
@@ -72,18 +72,18 @@ namespace Employee_API.Controllers
         // Getting the Selected Employee
 
         [HttpGet("{id:int}", Name = "GetEmployee")]
-        public ActionResult<IEnumerable<EmployeeDTO>> GetEmployee(int id)
+        public ActionResult<IEnumerable<EmployeeGetDTO>> GetEmployee(int id)
         {
 
             try
             {
-                // Log the attempt to find an employee
+                // Log the attempt to find an employee.
                 Custom_Logger.Log("Attempting to get an employee", $"EmployeeID: {id}");
 
-                // Attempt to fetch the employee from the database
+                // Attempt to fetch the employee from the database.
                 var employee = appDbContext.Employee_Table.FirstOrDefault(u => u.Id == id);
 
-                // Check if the employee was not found
+                // Check if the employee was not found.
                 if (employee == null)
                 {
                     Custom_Logger.Log("No employee found with the specified ID", $"EmployeeID: {id}");
@@ -117,7 +117,7 @@ namespace Employee_API.Controllers
 
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
-        public ActionResult<EmployeeDTO> CreateEmployee([FromBody] EmployeeDTO employee_dto)
+        public ActionResult<EmployeeCreateDTO> CreateEmployee([FromBody] EmployeeCreateDTO employee_dto)
         {
             try
             {
@@ -137,11 +137,6 @@ namespace Employee_API.Controllers
                     return Conflict(new { Message = "An employee with the same name already exists." });
                 }
 
-                if (employee_dto.Id > 0)
-                {
-                    Custom_Logger.Log("Invalid ID provided for new employee", $"EmployeeID: {employee_dto.Id}");
-                    return BadRequest(new { Message = "Invalid ID. ID should not be set for new employees." });
-                }
 
                 Employee model = new()
                 {
@@ -175,32 +170,35 @@ namespace Employee_API.Controllers
 
 
 
+
+
         //Deleting the Employee
-        [HttpDelete("{id:int}", Name = "DeleteEmployee")]
 
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        public IActionResult DeleteEmployee(int id)
+        [HttpDelete("{id:int}", Name = "DeleteEmployee")]
+
+        public IActionResult DeleteEmployee([FromBody] EmployeeDeleteDTO employee_delete_dto)
         {
             try
             {
-                if (id <= 0)
+                if (employee_delete_dto.Id <= 0)
                 {
-                    Custom_Logger.Log("Attempt to delete an employee with invalid ID", $"EmployeeID: {id}");
+                    Custom_Logger.Log("Attempt to delete an employee with invalid ID", $"EmployeeID: {employee_delete_dto.Id}");
                     return BadRequest(new { Message = "Invalid ID. Please provide a valid employee ID." });
                 }
 
-                var employeeToBeDeleted = appDbContext.Employee_Table.FirstOrDefault(u => u.Id == id);
+                var employeeToBeDeleted = appDbContext.Employee_Table.FirstOrDefault(u => u.Id == (employee_delete_dto.Id) );
 
                 if (employeeToBeDeleted == null)
                 {
-                    Custom_Logger.Log("No employee found for deletion", $"EmployeeID: {id}");
-                    return NotFound(new { Message = $"No employee found with ID {id}." });
+                    Custom_Logger.Log("No employee found for deletion", $"EmployeeID: {employee_delete_dto.Id}");
+                    return NotFound(new { Message = $"No employee found with ID {employee_delete_dto.Id}." });
                 }
 
                 appDbContext.Employee_Table.Remove(employeeToBeDeleted);
                 appDbContext.SaveChanges();
 
-                Custom_Logger.Log("Employee deleted successfully", $"EmployeeID: {id}");
+                Custom_Logger.Log("Employee deleted successfully", $"EmployeeID: {employee_delete_dto.Id}");
 
                 return NoContent();
             }
@@ -226,7 +224,7 @@ namespace Employee_API.Controllers
 
         [HttpPut("{id:int}", Name = "UpdateEmployee")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        public IActionResult UpdateVilla(int id, [FromBody] EmployeeDTO employee_dto)
+        public IActionResult UpdateVilla(int id, [FromBody] EmployeeUpdateDTO employee_dto)
         {
 
             try

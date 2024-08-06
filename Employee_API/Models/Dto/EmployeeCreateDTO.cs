@@ -2,15 +2,13 @@
 
 namespace Employee_API.Models.Dto
 {
-    public class EmployeeDTO
+    public class EmployeeCreateDTO
     {
-        public int Id { get; set; }
-
         [Required]
         [MaxLength(30)]
         public string Name { get; set; }
 
-        public EmployeeDTO()
+        public EmployeeCreateDTO()
         {
             Name = string.Empty;
         }
