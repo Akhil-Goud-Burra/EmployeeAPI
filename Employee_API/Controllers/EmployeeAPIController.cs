@@ -1,4 +1,5 @@
-﻿using Employee_API.Data;
+﻿using AutoMapper;
+using Employee_API.Data;
 using Employee_API.Logging;
 using Employee_API.Models;
 using Employee_API.Models.Dto;
@@ -21,10 +22,13 @@ namespace Employee_API.Controllers
 
         private readonly ApplicationDbContext appDbContext;
 
-        public EmployeeAPIController(ILogging logger, ApplicationDbContext appDbContext)
+        private readonly IMapper _mapper;
+
+        public EmployeeAPIController(ILogging logger, ApplicationDbContext appDbContext, IMapper _mapper)
         {
             Custom_Logger = logger;
             this.appDbContext = appDbContext;
+            this._mapper = _mapper;
         }
 
 
@@ -139,10 +143,9 @@ namespace Employee_API.Controllers
                 }
 
 
-                Employee model = new()
-                {
-                    Name = employee_dto.Name
-                };
+                // Used Auto Mapper.
+                Employee model = _mapper.Map<Employee>(employee_dto);
+
 
                 await appDbContext.Employee_Table.AddAsync(model);
                 await appDbContext.SaveChangesAsync();

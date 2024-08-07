@@ -1,6 +1,8 @@
+using Employee_API;
 using Employee_API.Data;
 using Employee_API.Logging;
 using Microsoft.EntityFrameworkCore;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +13,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<ApplicationDbContext>(option => {
     option.UseSqlServer(builder.Configuration.GetConnectionString("DefaultSQLConnection"));
 });
+
+
+// Register AutoMapper using the fully qualified name
+builder.Services.AddAutoMapper(typeof(MappingConfig));
 
 
 // Adding CORS Services to the container.
