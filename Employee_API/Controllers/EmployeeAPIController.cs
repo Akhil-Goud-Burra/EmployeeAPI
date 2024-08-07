@@ -3,6 +3,7 @@ using Employee_API.Logging;
 using Employee_API.Models;
 using Employee_API.Models.Dto;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System;
 
 namespace Employee_API.Controllers
@@ -30,14 +31,14 @@ namespace Employee_API.Controllers
 
         // Getting all the Employees
         [HttpGet]
-        public ActionResult<IEnumerable<EmployeeGetDTO>> GetEmployees()
+        public async Task< ActionResult<IEnumerable<EmployeeGetDTO>> > GetEmployees()
         {
             try
             {
                 Custom_Logger.Log("Attempting to get all the employees", "");
 
-                // Fetch the employees from the database
-                var employees = appDbContext.Employee_Table.ToList();
+                // Fetch the employees from the database asynchronously
+                var employees = await appDbContext.Employee_Table.ToListAsync();
 
                 // Check if any employees were found
                 if (employees == null || !employees.Any())
@@ -72,7 +73,7 @@ namespace Employee_API.Controllers
         // Getting the Selected Employee
 
         [HttpGet("{id:int}", Name = "GetEmployee")]
-        public ActionResult<IEnumerable<EmployeeGetDTO>> GetEmployee(int id)
+        public async Task< ActionResult<IEnumerable<EmployeeGetDTO>> > GetEmployee(int id)
         {
 
             try
@@ -80,8 +81,8 @@ namespace Employee_API.Controllers
                 // Log the attempt to find an employee.
                 Custom_Logger.Log("Attempting to get an employee", $"EmployeeID: {id}");
 
-                // Attempt to fetch the employee from the database.
-                var employee = appDbContext.Employee_Table.FirstOrDefault(u => u.Id == id);
+                // Attempt to fetch the employee from the database asynchronously.
+                var employee = await appDbContext.Employee_Table.FirstOrDefaultAsync(u => u.Id == id);
 
                 // Check if the employee was not found.
                 if (employee == null)
@@ -117,7 +118,7 @@ namespace Employee_API.Controllers
 
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
-        public ActionResult<EmployeeCreateDTO> CreateEmployee([FromBody] EmployeeCreateDTO employee_dto)
+        public async Task< ActionResult<EmployeeCreateDTO> > CreateEmployee([FromBody] EmployeeCreateDTO employee_dto)
         {
             try
             {
@@ -129,7 +130,7 @@ namespace Employee_API.Controllers
 
                 var employeeName = employee_dto.Name.Trim().ToLower();
 
-                var employeeExistence = appDbContext.Employee_Table.FirstOrDefault(u => u.Name.ToLower() == employeeName);
+                var employeeExistence = await appDbContext.Employee_Table.FirstOrDefaultAsync(u => u.Name.ToLower() == employeeName);
 
                 if (employeeExistence != null)
                 {
@@ -143,8 +144,8 @@ namespace Employee_API.Controllers
                     Name = employee_dto.Name
                 };
 
-                appDbContext.Employee_Table.Add(model);
-                appDbContext.SaveChanges();
+                await appDbContext.Employee_Table.AddAsync(model);
+                await appDbContext.SaveChangesAsync();
 
                 Custom_Logger.Log("Employee created successfully", $"EmployeeName: {model.Name}");
 
@@ -173,11 +174,10 @@ namespace Employee_API.Controllers
 
 
         //Deleting the Employee
-
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [HttpDelete("{id:int}", Name = "DeleteEmployee")]
 
-        public IActionResult DeleteEmployee([FromBody] EmployeeDeleteDTO employee_delete_dto)
+        public async Task< IActionResult > DeleteEmployee([FromBody] EmployeeDeleteDTO employee_delete_dto)
         {
             try
             {
@@ -187,7 +187,7 @@ namespace Employee_API.Controllers
                     return BadRequest(new { Message = "Invalid ID. Please provide a valid employee ID." });
                 }
 
-                var employeeToBeDeleted = appDbContext.Employee_Table.FirstOrDefault(u => u.Id == (employee_delete_dto.Id) );
+                var employeeToBeDeleted = await appDbContext.Employee_Table.FirstOrDefaultAsync(u => u.Id == (employee_delete_dto.Id) );
 
                 if (employeeToBeDeleted == null)
                 {
@@ -196,7 +196,10 @@ namespace Employee_API.Controllers
                 }
 
                 appDbContext.Employee_Table.Remove(employeeToBeDeleted);
-                appDbContext.SaveChanges();
+
+                // This sends the delete command to the database.
+                // This is actual database operation.
+                await appDbContext.SaveChangesAsync();
 
                 Custom_Logger.Log("Employee deleted successfully", $"EmployeeID: {employee_delete_dto.Id}");
 
@@ -224,7 +227,7 @@ namespace Employee_API.Controllers
 
         [HttpPut("{id:int}", Name = "UpdateEmployee")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        public IActionResult UpdateVilla(int id, [FromBody] EmployeeUpdateDTO employee_dto)
+        public async Task< IActionResult > UpdateVilla(int id, [FromBody] EmployeeUpdateDTO employee_dto)
         {
 
             try
@@ -241,7 +244,7 @@ namespace Employee_API.Controllers
                     return BadRequest(new { Message = "Mismatched ID in the request." });
                 }
 
-                var employeeToUpdate = appDbContext.Employee_Table.FirstOrDefault(e => e.Id == id);
+                var employeeToUpdate = await appDbContext.Employee_Table.FirstOrDefaultAsync(e => e.Id == id);
                 if (employeeToUpdate == null)
                 {
                     Custom_Logger.Log("Employee not found for update", $"EmployeeID: {id}");
@@ -252,7 +255,7 @@ namespace Employee_API.Controllers
                 employeeToUpdate.Name = employee_dto.Name;
 
                 appDbContext.Employee_Table.Update(employeeToUpdate);
-                appDbContext.SaveChanges();
+                await appDbContext.SaveChangesAsync();
 
                 Custom_Logger.Log("Employee updated successfully", $"EmployeeID: {id}");
 
