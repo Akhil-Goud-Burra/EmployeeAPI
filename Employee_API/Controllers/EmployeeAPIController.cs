@@ -3,6 +3,7 @@ using Employee_API.Data;
 using Employee_API.Logging;
 using Employee_API.Models;
 using Employee_API.Models.Dto;
+using Employee_API.Repository.IRepository;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -20,15 +21,18 @@ namespace Employee_API.Controllers
     {
         private readonly ILogging Custom_Logger;
 
-        private readonly ApplicationDbContext appDbContext;
+        private readonly IEmployeeRepository _dbEmployee;
 
         private readonly IMapper _mapper;
 
-        public EmployeeAPIController(ILogging logger, ApplicationDbContext appDbContext, IMapper _mapper)
+        private readonly ApplicationDbContext appDbContext;
+
+        public EmployeeAPIController(ILogging logger, IEmployeeRepository dbEmployee, IMapper _mapper, ApplicationDbContext appDbContext)
         {
             Custom_Logger = logger;
-            this.appDbContext = appDbContext;
+            this._dbEmployee = dbEmployee;
             this._mapper = _mapper;
+            this.appDbContext = appDbContext;
         }
 
 
@@ -42,7 +46,7 @@ namespace Employee_API.Controllers
                 Custom_Logger.Log("Attempting to get all the employees", "");
 
                 // Fetch the employees from the database asynchronously
-                var employees = await appDbContext.Employee_Table.ToListAsync();
+                var employees = await _dbEmployee.GetAllAsync();
 
                 // Check if any employees were found
                 if (employees == null || !employees.Any())
@@ -86,7 +90,7 @@ namespace Employee_API.Controllers
                 Custom_Logger.Log("Attempting to get an employee", $"EmployeeID: {id}");
 
                 // Attempt to fetch the employee from the database asynchronously.
-                var employee = await appDbContext.Employee_Table.FirstOrDefaultAsync(u => u.Id == id);
+                var employee = await _dbEmployee.GetAsync(u => u.Id == id);
 
                 // Check if the employee was not found.
                 if (employee == null)
@@ -134,7 +138,10 @@ namespace Employee_API.Controllers
 
                 var employeeName = employee_dto.Name.Trim().ToLower();
 
+                //var employeeExistence = await _dbEmployee.GetAsync(u => u.Name.ToLower() == employeeName);
+
                 var employeeExistence = await appDbContext.Employee_Table.FirstOrDefaultAsync(u => u.Name.ToLower() == employeeName);
+
 
                 if (employeeExistence != null)
                 {
@@ -147,8 +154,11 @@ namespace Employee_API.Controllers
                 Employee model = _mapper.Map<Employee>(employee_dto);
 
 
+                //await _dbEmployee.CreateAsync(model);
+
                 await appDbContext.Employee_Table.AddAsync(model);
                 await appDbContext.SaveChangesAsync();
+
 
                 Custom_Logger.Log("Employee created successfully", $"EmployeeName: {model.Name}");
 
@@ -190,7 +200,7 @@ namespace Employee_API.Controllers
                     return BadRequest(new { Message = "Invalid ID. Please provide a valid employee ID." });
                 }
 
-                var employeeToBeDeleted = await appDbContext.Employee_Table.FirstOrDefaultAsync(u => u.Id == (employee_delete_dto.Id) );
+                var employeeToBeDeleted = await _dbEmployee.GetAsync(u => u.Id == (employee_delete_dto.Id));
 
                 if (employeeToBeDeleted == null)
                 {
@@ -198,11 +208,8 @@ namespace Employee_API.Controllers
                     return NotFound(new { Message = $"No employee found with ID {employee_delete_dto.Id}." });
                 }
 
-                appDbContext.Employee_Table.Remove(employeeToBeDeleted);
 
-                // This sends the delete command to the database.
-                // This is actual database operation.
-                await appDbContext.SaveChangesAsync();
+                await _dbEmployee.DeleteAsync(employeeToBeDeleted);
 
                 Custom_Logger.Log("Employee deleted successfully", $"EmployeeID: {employee_delete_dto.Id}");
 
@@ -247,7 +254,7 @@ namespace Employee_API.Controllers
                     return BadRequest(new { Message = "Mismatched ID in the request." });
                 }
 
-                var employeeToUpdate = await appDbContext.Employee_Table.FirstOrDefaultAsync(e => e.Id == id);
+                var employeeToUpdate = await _dbEmployee.GetAsync(e => e.Id == id);
                 if (employeeToUpdate == null)
                 {
                     Custom_Logger.Log("Employee not found for update", $"EmployeeID: {id}");
@@ -257,8 +264,7 @@ namespace Employee_API.Controllers
                 // Update the properties of the existing employee
                 employeeToUpdate.Name = employee_dto.Name;
 
-                appDbContext.Employee_Table.Update(employeeToUpdate);
-                await appDbContext.SaveChangesAsync();
+                await _dbEmployee.UpdateAsync(employeeToUpdate);
 
                 Custom_Logger.Log("Employee updated successfully", $"EmployeeID: {id}");
 

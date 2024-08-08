@@ -1,6 +1,8 @@
 using Employee_API;
 using Employee_API.Data;
 using Employee_API.Logging;
+using Employee_API.Repository;
+using Employee_API.Repository.IRepository;
 using Microsoft.EntityFrameworkCore;
 
 
@@ -17,6 +19,10 @@ builder.Services.AddDbContext<ApplicationDbContext>(option => {
 
 // Register AutoMapper using the fully qualified name
 builder.Services.AddAutoMapper(typeof(MappingConfig));
+
+
+// Registering Repository Interface
+builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
 
 
 // Adding CORS Services to the container.
