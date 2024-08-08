@@ -11,9 +11,7 @@ namespace Employee_API.Repository.IRepository
 
         Task DeleteAsync(Employee entity);
 
-        Task Save();
-
-        Task<Employee> GetAsync(Expression<Func<Employee, bool>>? filter = null);
+        Task<Employee?> GetAsync(Expression<Func<Employee, bool>>? filter = null);
 
         Task<List<Employee>> GetAllAsync(Expression<Func<Employee, bool>>? filter = null);
 

@@ -17,24 +17,22 @@ namespace Employee_API.Repository
         }
 
 
-
         public async Task CreateAsync(Employee entity)
         {
-                await appDbContext.Employee_Table.AddAsync(entity);
-                await Save();
+            await appDbContext.Employee_Table.AddAsync(entity);
+            await appDbContext.SaveChangesAsync();
         }
-
 
 
         public async Task DeleteAsync(Employee entity)
         {
             appDbContext.Employee_Table.Remove(entity);
-            await Save();
+            await appDbContext.SaveChangesAsync();
         }
 
 
 
-        public async Task<Employee> GetAsync(Expression<Func<Employee, bool>>? filter = null)
+        public async Task<Employee?> GetAsync(Expression<Func<Employee, bool>>? filter = null)
         {
             IQueryable<Employee> query = appDbContext.Employee_Table;
 
@@ -45,10 +43,6 @@ namespace Employee_API.Repository
 
             var result = await query.FirstOrDefaultAsync();
 
-            if (result == null)
-            {
-                throw new InvalidOperationException("No matching employee found.");
-            }
 
             return result;
         }
@@ -69,18 +63,10 @@ namespace Employee_API.Repository
 
 
 
-
-        public async Task Save()
-        {
-            await appDbContext.SaveChangesAsync();
-        }
-
-
-
         public async Task UpdateAsync(Employee entity)
         {
             appDbContext.Employee_Table.Update(entity);
-            await Save();
+            await appDbContext.SaveChangesAsync();
         }
     }
 }
