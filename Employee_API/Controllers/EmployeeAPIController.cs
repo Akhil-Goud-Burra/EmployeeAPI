@@ -138,9 +138,7 @@ namespace Employee_API.Controllers
 
                 var employeeName = employee_dto.Name.Trim().ToLower();
 
-                //var employeeExistence = await _dbEmployee.GetAsync(u => u.Name.ToLower() == employeeName);
-
-                var employeeExistence = await appDbContext.Employee_Table.FirstOrDefaultAsync(u => u.Name.ToLower() == employeeName);
+                var employeeExistence = await _dbEmployee.GetAsync(u => u.Name.ToLower() == employeeName);
 
 
                 if (employeeExistence != null)
@@ -154,10 +152,7 @@ namespace Employee_API.Controllers
                 Employee model = _mapper.Map<Employee>(employee_dto);
 
 
-                //await _dbEmployee.CreateAsync(model);
-
-                await appDbContext.Employee_Table.AddAsync(model);
-                await appDbContext.SaveChangesAsync();
+                await _dbEmployee.CreateAsync(model);
 
 
                 Custom_Logger.Log("Employee created successfully", $"EmployeeName: {model.Name}");
